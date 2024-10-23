@@ -23,11 +23,14 @@
     import * as Card from "$lib/components/ui/card/index.js";
     import DarkmodeButton from '$lib/components/ui/darkmodeButton.svelte';
 
+    let serverOnline = false;
+
     async function startServer() {
         console.log('Starting server...');
         try {
             const result = await StartServer();
             console.log(result);
+            serverOnline = true;
             toast.success(result, {
                 description: "Listening for connections...",
                 action: {
@@ -198,11 +201,23 @@
 
     <div class="flex flex-col">
         <header class="backdrop-blur-md bg-white/80 dark:bg-zinc-950/50 sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b pl-5 pr-2">
-            <h1 class="text-xl font-semibold">Dashboard</h1>
-            <Button size="sm" class="ml-auto gap-1.5 text-sm">
-                <Server class="size-3.5"/>
-                Start server
-            </Button>
+            <h1 class="text-xl font-normal">Dashboard</h1>
+
+            {#if !serverOnline}
+                <Button size="sm" class="ml-auto gap-1.5 text-sm" on:click={startServer}>
+                    <Server class="size-3.5"/>
+                    Start server
+                </Button>
+
+            {:else}
+                <Button variant="secondary" size="sm" class="ml-auto gap-2 text-sm cursor-default">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    <span>Server online</span>
+                </Button>
+            {/if}
         </header>
         <main class="grid flex-1 gap-4 overflow-auto p-4 z-50 grid-rows-2 md:grid-cols-2 lg:grid-cols-3">
             <Dashboard/>
