@@ -2,6 +2,8 @@ package automathaus
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pocketbase/pocketbase"
@@ -19,11 +21,6 @@ func startPocketBase(app *pocketbase.PocketBase) chan error {
 	errChan := make(chan error)
 
 	go func() {
-		// Create a new pocketbase app
-		app = pocketbase.NewWithConfig(pocketbase.Config{
-			DefaultDev: false,
-		})
-
 		app.Bootstrap()
 		serveCmd := cmd.NewServeCommand(app, true)
 
@@ -39,11 +36,43 @@ func startPocketBase(app *pocketbase.PocketBase) chan error {
 	return errChan
 }
 
-func (server *AutomathausServer) StartServer() (string, error) {
-	server.pbInstance = pocketbase.NewWithConfig(pocketbase.Config{
-		DefaultDev: false,
+func NewAutomathausServer() (*AutomathausServer, error) {
+	automathausDir, err := getAutomathausDir()
+	if err != nil {
+		return nil, err
+	}
+	dataDir := filepath.Join(automathausDir, "automathaus_data")
+
+	pb := pocketbase.NewWithConfig(pocketbase.Config{
+		DefaultDev:     false,
+		DefaultDataDir: dataDir,
 	})
 
+	return &AutomathausServer{
+		running:    false,
+		pbInstance: pb,
+	}, nil
+}
+
+func getAutomathausDir() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Printf("Error getting config directory: %v\n", err)
+		return "", err
+	}
+
+	// Create the base automathaus directory
+	automathausDir := filepath.Join(configDir, ".automathaus")
+	if _, err := os.Stat(automathausDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(automathausDir, 0755); err != nil {
+			return "", fmt.Errorf("failed to create automathaus directory: %v", err)
+		}
+	}
+
+	return automathausDir, nil
+}
+
+func (server *AutomathausServer) StartServer() (string, error) {
 	errChan := startPocketBase(server.pbInstance)
 
 	select {
@@ -52,11 +81,5 @@ func (server *AutomathausServer) StartServer() (string, error) {
 		return "Server started!", nil
 	case err := <-errChan:
 		return "Errore", err
-	}
-}
-
-func NewAutomathausServer() *AutomathausServer {
-	return &AutomathausServer{
-		running: false,
 	}
 }

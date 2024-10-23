@@ -15,11 +15,15 @@ var assets embed.FS
 
 func main() {
 	// Create an instance of the app structure
-	automathausServer := automathaus.NewAutomathausServer()
+	automathausServer, err := automathaus.NewAutomathausServer()
+	if err != nil {
+		panic(err.Error())
+	}
+
 	app := NewApp()
 
 	// Create application with options
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:  "AutomathausServer",
 		Width:  1200,
 		Height: 720,
