@@ -2,38 +2,38 @@ package automathaus
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/grandcat/zeroconf"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/cmd"
+	"github.com/pocketbase/pocketbase/core"
 )
 
 type AutomathausServer struct {
 	running    bool
 	pbInstance *pocketbase.PocketBase
+	mDNSserver *zeroconf.Server
 }
 
 // StartPocketBase starts the PocketBase server in a goroutine
-func startPocketBase(app *pocketbase.PocketBase) chan error {
+func startPocketBase(app *pocketbase.PocketBase, errChan chan error) {
 	fmt.Println("Starting PocketBase")
-	errChan := make(chan error)
 
-	go func() {
-		app.Bootstrap()
-		serveCmd := cmd.NewServeCommand(app, true)
+	app.Bootstrap()
+	serveCmd := cmd.NewServeCommand(app, true)
 
-		// Execute the command and capture the error
-		err := serveCmd.Execute()
+	// Execute the command and capture the error
+	err := serveCmd.Execute()
 
-		if err != nil {
-			errChan <- err
-		}
-		close(errChan)
-	}()
-
-	return errChan
+	if err != nil {
+		errChan <- err
+	}
+	close(errChan)
 }
 
 func NewAutomathausServer() (*AutomathausServer, error) {
@@ -46,6 +46,18 @@ func NewAutomathausServer() (*AutomathausServer, error) {
 	pb := pocketbase.NewWithConfig(pocketbase.Config{
 		DefaultDev:     false,
 		DefaultDataDir: dataDir,
+	})
+
+	pb.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		e.Router.POST("/registerNode", func(c echo.Context) error {
+			return registerNode(pb, c)
+		})
+
+		e.Router.POST("/registerTempHumidity", func(c echo.Context) error {
+			return registerTempHumidity(pb, c)
+		})
+
+		return nil
 	})
 
 	return &AutomathausServer{
@@ -73,11 +85,20 @@ func getAutomathausDir() (string, error) {
 }
 
 func (server *AutomathausServer) StartServer() (string, error) {
-	errChan := startPocketBase(server.pbInstance)
+	log.Println("Starting server")
+	errChan := make(chan error)
+	go startPocketBase(server.pbInstance, errChan)
+
+	var err error // Add this line
+	server.mDNSserver, err = startMDNS()
+	if err != nil {
+		errChan <- err
+	}
 
 	select {
 	case <-time.After(1 * time.Second):
 		server.running = true
+		log.Println("Server started!")
 		return "Server started!", nil
 	case err := <-errChan:
 		return "Errore", err
