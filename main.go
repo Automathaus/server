@@ -1,7 +1,8 @@
 package main
 
 import (
-	"embed"
+	"AutomathausServer/automathaus" // Correct import path based on your go.mod
+	"embed"                         // Correct import path based on your go.mod
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -14,7 +15,7 @@ var assets embed.FS
 
 func main() {
 	// Create an instance of the app structure
-	automathausServer := NewAutomathausServer()
+	automathausServer := automathaus.NewAutomathausServer()
 	app := NewApp()
 
 	// Create application with options
