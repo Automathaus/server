@@ -3,21 +3,57 @@ package automathaus
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/grandcat/zeroconf"
+	"github.com/hashicorp/mdns"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/cmd"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
 
 type AutomathausServer struct {
 	running    bool
 	pbInstance *pocketbase.PocketBase
-	mDNSserver *zeroconf.Server
+	mDNSserver *mdns.Server
+}
+
+func getLocalIP() (string, error) {
+	// Get all network interfaces
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	// Look through all interfaces
+	for _, iface := range interfaces {
+		// Skip loopback and down interfaces
+		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+
+		// Get addresses for this interface
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		// Look for a suitable IP address
+		for _, addr := range addrs {
+			// Check if it's an IP network
+			if ipnet, ok := addr.(*net.IPNet); ok {
+				// Get IPv4 address
+				if ip4 := ipnet.IP.To4(); ip4 != nil {
+					return ip4.String(), nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no IP address found")
 }
 
 // StartPocketBase starts the PocketBase server in a goroutine
@@ -25,10 +61,17 @@ func startPocketBase(app *pocketbase.PocketBase, errChan chan error) {
 	fmt.Println("Starting PocketBase")
 
 	app.Bootstrap()
-	serveCmd := cmd.NewServeCommand(app, true)
+	hostIP, err := getLocalIP()
+	if err != nil {
+		errChan <- err
+	}
 
-	// Execute the command and capture the error
-	err := serveCmd.Execute()
+	_, err = apis.Serve(app, apis.ServeConfig{
+		HttpAddr:           fmt.Sprintf("%s:%d", hostIP, port),
+		ShowStartBanner:    true,
+		AllowedOrigins:     []string{"*"},
+		CertificateDomains: []string{},
+	})
 
 	if err != nil {
 		errChan <- err

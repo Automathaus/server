@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 )
 
@@ -21,23 +22,22 @@ func registerNode(app *pocketbase.PocketBase, c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON format: " + err.Error()})
 	}
 
-	// Add validation check
-	if request.Name == "" || request.Ip == "" || request.MacAddress == "" || request.Type == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "All fields are required"})
-	}
-
 	collection, err := app.Dao().FindCollectionByNameOrId("nodes")
 	if err != nil {
 		return err
 	}
 
 	record := models.NewRecord(collection)
-	record.Set("name", request.Name)
-	record.Set("ip", request.Ip)
-	record.Set("macAddress", request.MacAddress)
-	record.Set("nodeType", request.Type)
+	form := forms.NewRecordUpsert(app, record)
 
-	if err := app.Dao().SaveRecord(record); err != nil {
+	form.LoadData(map[string]any{
+		"name":       request.Name,
+		"ip":         request.Ip,
+		"macAddress": request.MacAddress,
+		"nodeType":   request.Type,
+	})
+
+	if err := form.Submit(); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
@@ -57,28 +57,22 @@ func registerTempHumidity(app *pocketbase.PocketBase, c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON format: " + err.Error()})
 	}
 
-	// Add validation check
-	if request.Room == "" || request.Sensor == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "All fields are required"})
-	}
-
-	// Add range validation for temperature and humidity
-	if request.Temperature == 0 || request.Humidity == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Temperature and humidity must be provided"})
-	}
-
 	collection, err := app.Dao().FindCollectionByNameOrId("tempData")
 	if err != nil {
 		return err
 	}
 
 	record := models.NewRecord(collection)
-	record.Set("temperature", request.Temperature)
-	record.Set("humidity", request.Humidity)
-	record.Set("room", request.Room)
-	record.Set("sensor", request.Sensor)
+	form := forms.NewRecordUpsert(app, record)
 
-	if err := app.Dao().SaveRecord(record); err != nil {
+	form.LoadData(map[string]any{
+		"temperature": request.Temperature,
+		"humidity":    request.Humidity,
+		"room":        request.Room,
+		"sensor":      request.Sensor,
+	})
+
+	if err := form.Submit(); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 

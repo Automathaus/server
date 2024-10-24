@@ -2,8 +2,9 @@ package automathaus
 
 import (
 	"log"
+	"net"
 
-	"github.com/grandcat/zeroconf"
+	"github.com/hashicorp/mdns"
 )
 
 const (
@@ -13,23 +14,30 @@ const (
 	port        = 8090 // Default Pocketbase port
 )
 
-func startMDNS() (*zeroconf.Server, error) {
+func startMDNS() (*mdns.Server, error) {
 	log.Println("Starting mDNS service")
-	// Create the Zeroconf service
-	server, err := zeroconf.Register(
-		serviceName,             // Service instance name
-		serviceType,             // Service type
+
+	// Setup mdns service
+	service, err := mdns.NewMDNSService(
+		serviceName,             // Instance name
+		serviceType,             // Service
 		domain,                  // Domain
+		"",                      // Host (empty = use system hostname)
 		port,                    // Port
-		[]string{"version=0.1"}, // Metadata
-		nil,                     // Interface to advertise on (nil = all)
+		[]net.IP{},              // IPs (empty = use system IPs)
+		[]string{"version=0.1"}, // TXT records
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println("mDNS service started")
+	// Create the mDNS server
+	server, err := mdns.NewServer(&mdns.Config{Zone: service})
+	if err != nil {
+		return nil, err
+	}
 
+	log.Println("mDNS service started")
 	return server, nil
 }
