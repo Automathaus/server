@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/cron"
 )
 
 type AutomathausServer struct {
@@ -99,6 +100,18 @@ func NewAutomathausServer() (*AutomathausServer, error) {
 		e.Router.POST("/registerTempHumidity", func(c echo.Context) error {
 			return registerTempHumidity(pb, c)
 		})
+
+		return nil
+	})
+
+	pb.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+
+		schedulerPingNodes := cron.New()
+		// schedulerPingNodes.SetInterval(5 * time.Second)
+		schedulerPingNodes.MustAdd("pingNodes", "*/1 * * * *", func() {
+			pingNodes(pb)
+		})
+		schedulerPingNodes.Start()
 
 		return nil
 	})
