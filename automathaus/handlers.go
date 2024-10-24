@@ -1,6 +1,7 @@
 package automathaus
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
@@ -11,10 +12,10 @@ import (
 
 func registerNode(app *pocketbase.PocketBase, c echo.Context) error {
 	type RegisterNodeRequest struct {
-		Name       string `json:"name" validate:"required"`
+		Name       string `json:"nodeName" validate:"required"`
 		Ip         string `json:"ip" validate:"required,ip"`
 		MacAddress string `json:"macAddress" validate:"required,mac"`
-		Type       string `json:"type" validate:"required"`
+		Type       string `json:"nodeType" validate:"required"`
 	}
 
 	var request RegisterNodeRequest
@@ -27,6 +28,27 @@ func registerNode(app *pocketbase.PocketBase, c echo.Context) error {
 		return err
 	}
 
+	//check if the node already exists
+	existingNode, err := app.Dao().FindFirstRecordByData("nodes", "macAddress", request.MacAddress)
+	if err == nil && existingNode != nil {
+		form := forms.NewRecordUpsert(app, existingNode)
+		form.LoadData(map[string]any{
+			"name":   request.Name,
+			"ip":     request.Ip,
+			"type":   request.Type,
+			"online": true,
+		})
+		if err := form.Submit(); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		return c.JSON(http.StatusOK, map[string]string{"id": existingNode.Id})
+	}
+	if err != nil && err != sql.ErrNoRows {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error checking for existing node: " + err.Error()})
+	}
+	// Node doesn't exist, continue with creation
+
 	record := models.NewRecord(collection)
 	form := forms.NewRecordUpsert(app, record)
 
@@ -34,14 +56,16 @@ func registerNode(app *pocketbase.PocketBase, c echo.Context) error {
 		"name":       request.Name,
 		"ip":         request.Ip,
 		"macAddress": request.MacAddress,
-		"nodeType":   request.Type,
+		"type":       request.Type,
+		"online":     true,
 	})
 
 	if err := form.Submit(); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "Node registered successfully"})
+	//respond with the id of the new record
+	return c.JSON(http.StatusOK, map[string]string{"id": record.Id})
 }
 
 func registerTempHumidity(app *pocketbase.PocketBase, c echo.Context) error {
