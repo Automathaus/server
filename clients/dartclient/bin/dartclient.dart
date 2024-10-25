@@ -1,6 +1,12 @@
 import 'package:pocketbase/pocketbase.dart';
 
-void main() async {
-  final pb = PocketBase('http://192.168.1.253:8090');
-  await pb.send("/print-body", query: { "abc": 123 });
+final pb = PocketBase('http://192.168.1.253:8090');
+
+Future<void> controlLight(String roomName, String lightName, String duration) async {
+  await pb.send("/rooms/$roomName/lights/$lightName", query: {"duration": duration});
 }
+
+void main() async {
+  await controlLight("MakerFaire", "LuceTavolo", "1000");
+}
+
