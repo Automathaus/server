@@ -1,8 +1,8 @@
-# README
+# Automathaus Server
 
 ## About
 
-This is the official Wails Svelte-TS template.
+Server for the Automathaus domotic system.
 
 ## Live Development
 
