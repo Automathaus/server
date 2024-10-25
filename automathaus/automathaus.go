@@ -101,6 +101,10 @@ func NewAutomathausServer() (*AutomathausServer, error) {
 			return registerTempHumidity(pb, c)
 		})
 
+		e.Router.GET("/rooms/:roomName/lights/:lightName", func(c echo.Context) error {
+			return lightsControl(pb, c)
+		})
+
 		return nil
 	})
 
