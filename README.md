@@ -1,4 +1,5 @@
 # Automathaus Server
+![Automathausbanner](https://github.com/user-attachments/assets/c98e062b-5e68-4521-be67-546ca700de25)
 
 ## About
 
