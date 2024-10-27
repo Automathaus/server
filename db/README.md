@@ -10,9 +10,9 @@ The application initializes the database from the user's configuration folder. T
 ## Initial Setup
 1. Ensure you have the necessary permissions to access and modify the user configuration folder.
 2. On first run, the application will automatically create the database in the appropriate location. However, to set up the initial structure and data:
-   a. Locate the database files in this folder (db/).
-   b. Copy these files to the `/automathaus_data` folder in your user configuration directory.
-   c. The application will then use these files to initialize the database with the necessary tables and initial data.
+- Locate the database files in this folder (db/).
+- Copy these files to the `/automathaus_data` folder in your user configuration directory.
+- The application will then use these files to initialize the database with the necessary tables and initial data.
 
 Note: If you skip this step, the database will be created but will be empty, lacking the required structure for the application to function properly.
 
@@ -40,5 +40,3 @@ If you encounter database-related issues:
 1. Check the application logs for any error messages.
 2. Verify the database file permissions.
 3. Ensure sufficient disk space in the user configuration folder.
-
-For further assistance, please contact the development team.
